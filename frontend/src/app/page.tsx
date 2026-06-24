@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { NDAData, defaultNDAData } from "@/types/nda";
 import { generateNDAMarkdown } from "@/lib/generateNDA";
+import NDAPreview from "@/components/NDAPreview";
 
 const Field = ({
   label,
@@ -48,7 +49,17 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  const preview = generateNDAMarkdown(data);
+  const handleDownloadPDF = async () => {
+    const html2pdf = (await import("html2pdf.js")).default;
+    const element = document.getElementById("nda-print-area");
+    if (!element) return;
+    html2pdf(element, {
+      margin: [15, 20],
+      filename: `Mutual-NDA-${data.party1Company || "Party1"}-${data.party2Company || "Party2"}.pdf`,
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    });
+  };
 
   return (
     <div className="min-h-screen">
@@ -184,12 +195,20 @@ export default function Home() {
               />
             </section>
 
-            <button
-              onClick={handleDownload}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded text-sm transition-colors"
-            >
-              Download NDA (.md)
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDownload}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded text-sm transition-colors"
+              >
+                Download .md
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded text-sm transition-colors"
+              >
+                Download PDF
+              </button>
+            </div>
           </div>
         </div>
 
@@ -199,9 +218,9 @@ export default function Home() {
             <h2 className="text-sm font-semibold text-gray-700">Preview</h2>
             <span className="text-xs text-gray-400">Updates as you type</span>
           </div>
-          <pre className="whitespace-pre-wrap font-mono text-xs text-gray-700 bg-white border border-gray-200 rounded p-4 leading-relaxed">
-            {preview}
-          </pre>
+          <div id="nda-print-area" className="bg-white border border-gray-200 rounded p-8">
+            <NDAPreview data={data} />
+          </div>
         </div>
       </div>
     </div>

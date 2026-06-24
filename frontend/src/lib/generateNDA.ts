@@ -81,8 +81,8 @@ By signing this Cover Page, each party agrees to enter into this MNDA as of the 
 `;
 
   const standardTerms = STANDARD_TERMS
-    .replace(/\$\{"\{Governing Law\}"\}/g, data.governingLaw || "[Governing Law]")
-    .replace(/\$\{"\{Jurisdiction\}"\}/g, data.jurisdiction || "[Jurisdiction]");
+    .replace(/\{Governing Law\}/g, data.governingLaw || "[Governing Law]")
+    .replace(/\{Jurisdiction\}/g, data.jurisdiction || "[Jurisdiction]");
 
   return coverPage + standardTerms;
 }
