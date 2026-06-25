@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { authHeader, getToken } from "@/lib/auth";
 
 interface Message {
   role: "user" | "assistant";
@@ -17,6 +18,7 @@ interface ChatResponse {
 
 export interface ChatState {
   documentType: string | null;
+  fields: Record<string, string>;
   renderedContent: string | null;
   complete: boolean;
 }
@@ -32,6 +34,7 @@ export default function ChatInterface({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
+  const [saved, setSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -50,6 +53,25 @@ export default function ChatInterface({
       body: JSON.stringify({ messages: msgs }),
     });
     return res.json() as Promise<ChatResponse>;
+  }
+
+  async function saveDocument(state: ChatState) {
+    const token = getToken();
+    if (!token || !state.documentType || !state.renderedContent) return;
+    try {
+      await fetch(`${API_BASE}/api/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader() },
+        body: JSON.stringify({
+          document_type: state.documentType,
+          fields: state.fields,
+          rendered_content: state.renderedContent,
+        }),
+      });
+      setSaved(true);
+    } catch {
+      // silent — document still usable even if save fails
+    }
   }
 
   async function startChat() {
@@ -84,12 +106,17 @@ export default function ChatInterface({
   }
 
   function updateState(data: ChatResponse) {
-    if (data.complete) setComplete(true);
-    onStateUpdate({
+    const newState: ChatState = {
       documentType: data.document_type,
+      fields: data.fields ?? {},
       renderedContent: data.rendered_content,
       complete: data.complete,
-    });
+    };
+    if (data.complete && !complete) {
+      setComplete(true);
+      saveDocument(newState);
+    }
+    onStateUpdate(newState);
   }
 
   return (
@@ -101,7 +128,7 @@ export default function ChatInterface({
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-2.5 text-sm ${
+              className={`max-w-[80%] rounded-lg px-4 py-2.5 text-sm leading-relaxed ${
                 msg.role === "user" ? "text-white" : "bg-gray-100 text-gray-800"
               }`}
               style={msg.role === "user" ? { backgroundColor: "#209dd7" } : {}}
@@ -124,13 +151,18 @@ export default function ChatInterface({
         )}
 
         {complete && (
-          <div className="text-center py-2">
+          <div className="text-center py-2 space-y-1">
             <span
               className="text-xs font-medium px-3 py-1 rounded-full text-white"
               style={{ backgroundColor: "#ecad0a" }}
             >
               Document Complete
             </span>
+            {saved && (
+              <p className="text-xs" style={{ color: "#888888" }}>
+                Saved to your documents
+              </p>
+            )}
           </div>
         )}
 
@@ -145,7 +177,7 @@ export default function ChatInterface({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Type your message..."
+            placeholder="Type your message…"
             disabled={loading || complete}
             className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
           />
