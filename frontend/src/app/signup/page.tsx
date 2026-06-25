@@ -7,7 +7,7 @@ import { setAuth } from "@/lib/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,16 +17,20 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.detail ?? "Invalid email or password");
+        setError(data.detail ?? "Registration failed");
         return;
       }
       const data = await res.json();
@@ -47,7 +51,7 @@ export default function LoginPage() {
             prelegal
           </h1>
           <p className="text-sm" style={{ color: "#888888" }}>
-            Sign in to your account
+            Create your account
           </p>
         </div>
 
@@ -75,7 +79,7 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Min. 6 characters"
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
@@ -92,14 +96,14 @@ export default function LoginPage() {
             className="w-full text-white font-medium py-2.5 rounded text-sm transition-opacity hover:opacity-90 disabled:opacity-50 mt-2"
             style={{ backgroundColor: "#753991" }}
           >
-            {loading ? "Signing in…" : "Sign In"}
+            {loading ? "Creating account…" : "Create Account"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-xs" style={{ color: "#888888" }}>
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-medium hover:underline" style={{ color: "#209dd7" }}>
-            Sign up
+          Already have an account?{" "}
+          <Link href="/login" className="font-medium hover:underline" style={{ color: "#209dd7" }}>
+            Sign in
           </Link>
         </p>
       </div>

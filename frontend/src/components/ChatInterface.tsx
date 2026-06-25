@@ -17,6 +17,7 @@ interface ChatResponse {
 
 export interface ChatState {
   documentType: string | null;
+  fields: Record<string, string>;
   renderedContent: string | null;
   complete: boolean;
 }
@@ -84,12 +85,16 @@ export default function ChatInterface({
   }
 
   function updateState(data: ChatResponse) {
-    if (data.complete) setComplete(true);
-    onStateUpdate({
+    const newState: ChatState = {
       documentType: data.document_type,
+      fields: data.fields ?? {},
       renderedContent: data.rendered_content,
       complete: data.complete,
-    });
+    };
+    if (data.complete && !complete) {
+      setComplete(true);
+    }
+    onStateUpdate(newState);
   }
 
   return (
@@ -101,7 +106,7 @@ export default function ChatInterface({
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-2.5 text-sm ${
+              className={`max-w-[80%] rounded-lg px-4 py-2.5 text-sm leading-relaxed ${
                 msg.role === "user" ? "text-white" : "bg-gray-100 text-gray-800"
               }`}
               style={msg.role === "user" ? { backgroundColor: "#209dd7" } : {}}
@@ -129,7 +134,7 @@ export default function ChatInterface({
               className="text-xs font-medium px-3 py-1 rounded-full text-white"
               style={{ backgroundColor: "#ecad0a" }}
             >
-              Document Complete
+              Document Complete — use Save button to store it
             </span>
           </div>
         )}
@@ -145,7 +150,7 @@ export default function ChatInterface({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            placeholder="Type your message..."
+            placeholder="Type your message…"
             disabled={loading || complete}
             className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
           />
