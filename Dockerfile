@@ -13,6 +13,8 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 COPY backend/ ./backend/
+COPY catalog.json ./catalog.json
+COPY templates/ ./templates/
 COPY --from=frontend-builder /app/out ./backend/static/
 
 WORKDIR /app/backend

@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+mark.field-filled {
+  background: rgba(236, 173, 10, 0.18);
+  border-bottom: 1.5px solid #ecad0a;
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+@media print {
+  mark.field-filled {
+    background: rgba(236, 173, 10, 0.3);
+    border-bottom: 1px solid #ecad0a;
+  }
+}
+
 @media print {
   body * {
     visibility: hidden;
