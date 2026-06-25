@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { NDAData, defaultNDAData } from "@/types/nda";
 import { generateNDAMarkdown } from "@/lib/generateNDA";
 import NDAPreview from "@/components/NDAPreview";
@@ -33,7 +34,14 @@ const Field = ({
 );
 
 export default function Home() {
+  const router = useRouter();
   const [data, setData] = useState<NDAData>(defaultNDAData);
+
+  useEffect(() => {
+    if (!localStorage.getItem("user")) {
+      router.replace("/login");
+    }
+  }, [router]);
 
   const update = (name: keyof NDAData, value: string) =>
     setData((prev) => ({ ...prev, [name]: value }));
