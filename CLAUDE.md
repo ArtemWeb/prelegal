@@ -52,6 +52,45 @@ Backend available at http://localhost:8000
 
 ---
 
+## Current implementation state
+
+### Architecture (as of SCRUM-8 + SCRUM-9)
+
+**Backend** (`backend/`):
+- `main.py` — FastAPI app, lifespan init of SQLite, CORS middleware, endpoints:
+  - `GET /api/health`
+  - `POST /api/auth/login` — fake login (accepts any credentials)
+  - `POST /api/chat` — AI chat endpoint
+- `chat.py` — LiteLLM call to `openrouter/openai/gpt-oss-120b` via Cerebras, returns `{ message, fields, complete }` as JSON
+- `database.py` — SQLite init with `users` table (created fresh on each container start)
+- `pyproject.toml` — uv project, dependencies: fastapi, uvicorn, aiosqlite, litellm, pydantic
+- `static/` — served by FastAPI at `/`, contains the built Next.js frontend (copied in Dockerfile)
+
+**Frontend** (`frontend/`):
+- Next.js 14, static export (`output: "export"`), built to `out/`
+- `src/app/login/page.tsx` — fake login screen, stores `{ email }` in localStorage on submit
+- `src/app/page.tsx` — main app, auth guard (redirects to `/login` if no localStorage user), shows ChatInterface + NDA preview
+- `src/components/ChatInterface.tsx` — freeform AI chat, calls `POST /api/chat`, updates NDA fields in real-time
+- `src/components/NDAPreview.tsx` — renders NDA markdown preview
+- `src/lib/generateNDA.ts` — generates NDA markdown from field data
+- `src/types/nda.ts` — NDAData type and defaultNDAData
+
+**Docker**:
+- `Dockerfile` — 2-stage build: `node:20-alpine` builds frontend, `python:3.12-slim` + uv runs backend
+- `docker-compose.yml` — single `app` service, port 8000, persistent SQLite volume, reads `.env`
+- `.dockerignore` — excludes `node_modules`, `.next`, `__pycache__`, `.venv`
+
+**Scripts** (`scripts/`): start/stop for Mac, Linux, Windows — all run `docker compose up/down`
+
+### Chat flow
+1. Page load → `ChatInterface` calls `POST /api/chat` with empty messages array
+2. Backend sends system prompt + conversation to LiteLLM → Cerebras
+3. AI responds with JSON: `{ message: string, fields: NDAData (nulls for unknown), complete: bool }`
+4. Frontend shows `message` in chat bubble, merges non-null `fields` into NDA preview
+5. User replies → repeat until `complete: true`
+
+---
+
 ## Color Scheme
 
 - Accent Yellow: #ecad0a

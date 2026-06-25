@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { NDAData, defaultNDAData } from "@/types/nda";
 
 interface Message {
   role: "user" | "assistant";
@@ -10,21 +9,30 @@ interface Message {
 
 interface ChatResponse {
   message: string;
-  fields: Partial<NDAData>;
+  document_type: string | null;
+  fields: Record<string, string>;
+  rendered_content: string | null;
+  complete: boolean;
+}
+
+export interface ChatState {
+  documentType: string | null;
+  renderedContent: string | null;
   complete: boolean;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export default function ChatInterface({
-  onFieldsUpdate,
+  onStateUpdate,
 }: {
-  onFieldsUpdate: (fields: NDAData) => void;
+  onStateUpdate: (state: ChatState) => void;
 }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,20 +43,24 @@ export default function ChatInterface({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  async function callApi(msgs: Message[]) {
+    const res = await fetch(`${API_BASE}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: msgs }),
+    });
+    return res.json() as Promise<ChatResponse>;
+  }
+
   async function startChat() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [] }),
-      });
-      const data: ChatResponse = await res.json();
+      const data = await callApi([]);
       setMessages([{ role: "assistant", content: data.message }]);
-      updateFields(data.fields);
-      if (data.complete) setComplete(true);
+      updateState(data);
     } finally {
       setLoading(false);
+      inputRef.current?.focus();
     }
   }
 
@@ -62,24 +74,22 @@ export default function ChatInterface({
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages }),
-      });
-      const data: ChatResponse = await res.json();
+      const data = await callApi(newMessages);
       setMessages([...newMessages, { role: "assistant", content: data.message }]);
-      updateFields(data.fields);
-      if (data.complete) setComplete(true);
+      updateState(data);
     } finally {
       setLoading(false);
+      inputRef.current?.focus();
     }
   }
 
-  function updateFields(fields: Partial<NDAData>) {
-    onFieldsUpdate({ ...defaultNDAData, ...Object.fromEntries(
-      Object.entries(fields).filter(([, v]) => v !== null && v !== undefined)
-    )} as NDAData);
+  function updateState(data: ChatResponse) {
+    if (data.complete) setComplete(true);
+    onStateUpdate({
+      documentType: data.document_type,
+      renderedContent: data.rendered_content,
+      complete: data.complete,
+    });
   }
 
   return (
@@ -92,9 +102,7 @@ export default function ChatInterface({
           >
             <div
               className={`max-w-[80%] rounded-lg px-4 py-2.5 text-sm ${
-                msg.role === "user"
-                  ? "text-white"
-                  : "bg-gray-100 text-gray-800"
+                msg.role === "user" ? "text-white" : "bg-gray-100 text-gray-800"
               }`}
               style={msg.role === "user" ? { backgroundColor: "#209dd7" } : {}}
             >
@@ -132,6 +140,7 @@ export default function ChatInterface({
       <div className="border-t border-gray-200 p-4">
         <div className="flex gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}

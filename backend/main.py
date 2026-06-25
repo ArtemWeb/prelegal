@@ -1,6 +1,5 @@
 import os
 from contextlib import asynccontextmanager
-from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +8,7 @@ from pydantic import BaseModel
 
 from chat import chat
 from database import init_db
+from document_service import find_document, load_template, render_document
 
 
 @asynccontextmanager
@@ -55,6 +55,20 @@ async def login(body: LoginRequest):
 async def chat_endpoint(body: ChatRequest):
     try:
         result = chat([m.model_dump() for m in body.messages])
+
+        # Render the document template with collected fields
+        document_type = result.get("document_type")
+        fields = result.get("fields", {})
+        rendered_content = None
+
+        if document_type and fields:
+            doc = find_document(document_type)
+            if doc:
+                template = load_template(doc["filename"])
+                if template:
+                    rendered_content = render_document(template, fields)
+
+        result["rendered_content"] = rendered_content
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
