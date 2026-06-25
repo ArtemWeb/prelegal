@@ -7,7 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import ChatInterface, { ChatState } from "@/components/ChatInterface";
-import { clearAuth, getUser } from "@/lib/auth";
+import { authHeader, clearAuth, getUser } from "@/lib/auth";
 
 const PLACEHOLDER_TEXT = `# Your document will appear here
 
@@ -22,6 +22,9 @@ export default function Home() {
     complete: false,
   });
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const user = getUser();
@@ -29,11 +32,34 @@ export default function Home() {
       router.replace("/login");
     } else {
       setUserEmail(user.email);
+      setAuthChecked(true);
     }
   }, [router]);
 
+  if (!authChecked) return null;
+
   const content = chatState.renderedContent ?? PLACEHOLDER_TEXT;
   const filledFields = Object.entries(chatState.fields).filter(([, v]) => v);
+
+  const handleSave = async () => {
+    if (!chatState.documentType || !chatState.renderedContent) return;
+    setSaving(true);
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
+      await fetch(`${API_BASE}/api/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader() },
+        body: JSON.stringify({
+          document_type: chatState.documentType,
+          fields: chatState.fields,
+          rendered_content: chatState.renderedContent,
+        }),
+      });
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSignOut = () => {
     clearAuth();
@@ -63,7 +89,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-6">
@@ -78,6 +104,14 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleSave}
+            disabled={!chatState.renderedContent || saving || saved}
+            className="font-medium py-1.5 px-3 rounded text-xs transition-opacity hover:opacity-90 disabled:opacity-40 text-white"
+            style={{ backgroundColor: saved ? "#22c55e" : "#ecad0a" }}
+          >
+            {saving ? "Saving…" : saved ? "Saved ✓" : "Save"}
+          </button>
           <button
             onClick={handleDownload}
             disabled={!chatState.renderedContent}

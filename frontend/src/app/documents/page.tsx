@@ -30,6 +30,7 @@ export default function DocumentsPage() {
   const [selected, setSelected] = useState<DocDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const user = getUser();
@@ -38,8 +39,11 @@ export default function DocumentsPage() {
       return;
     }
     setUserEmail(user.email);
+    setAuthChecked(true);
     fetchDocs();
   }, [router]);
+
+  if (!authChecked) return null;
 
   async function fetchDocs() {
     setLoading(true);
@@ -88,7 +92,7 @@ export default function DocumentsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">

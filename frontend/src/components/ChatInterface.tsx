@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { authHeader, getToken } from "@/lib/auth";
 
 interface Message {
   role: "user" | "assistant";
@@ -34,7 +33,6 @@ export default function ChatInterface({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
-  const [saved, setSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -53,25 +51,6 @@ export default function ChatInterface({
       body: JSON.stringify({ messages: msgs }),
     });
     return res.json() as Promise<ChatResponse>;
-  }
-
-  async function saveDocument(state: ChatState) {
-    const token = getToken();
-    if (!token || !state.documentType || !state.renderedContent) return;
-    try {
-      await fetch(`${API_BASE}/api/documents`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeader() },
-        body: JSON.stringify({
-          document_type: state.documentType,
-          fields: state.fields,
-          rendered_content: state.renderedContent,
-        }),
-      });
-      setSaved(true);
-    } catch {
-      // silent — document still usable even if save fails
-    }
   }
 
   async function startChat() {
@@ -114,7 +93,6 @@ export default function ChatInterface({
     };
     if (data.complete && !complete) {
       setComplete(true);
-      saveDocument(newState);
     }
     onStateUpdate(newState);
   }
@@ -151,18 +129,13 @@ export default function ChatInterface({
         )}
 
         {complete && (
-          <div className="text-center py-2 space-y-1">
+          <div className="text-center py-2">
             <span
               className="text-xs font-medium px-3 py-1 rounded-full text-white"
               style={{ backgroundColor: "#ecad0a" }}
             >
-              Document Complete
+              Document Complete — use Save button to store it
             </span>
-            {saved && (
-              <p className="text-xs" style={{ color: "#888888" }}>
-                Saved to your documents
-              </p>
-            )}
           </div>
         )}
 
